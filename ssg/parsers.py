@@ -1,15 +1,19 @@
 from typing import List
 from pathlib import Path
 import shutil
+import sys
+from docutils.core import publish_parts
+from markdown import markdown
+from ssg.content import Content
 
 
 class Parser:
-    extensions:List[str] = []
+    extensions: List[str] = []
 
     def valid_extension(self, extension):
         return extension in self.extensions
 
-    def parse(self, path:Path, source:Path, dest:Path):
+    def parse(self, path: Path, source: Path, dest: Path):
         raise NotImplementedError
 
     def read(self, path):
@@ -22,12 +26,31 @@ class Parser:
         with open(full_path, 'w') as file:
             file.write(content)
 
-    def copy(self, path, source,dest):
+    def copy(self, path, source, dest):
         shutil.copy2(path, dest / path.relative_to(source))
 
 
 class ResourceParser(Parser):
     extensions = [".jpg", ".png", ".gif", ".css", ".html"]
 
-    def parse(self, path:Path, source:Path, dest:Path):
+    def parse(self, path: Path, source: Path, dest: Path):
         Parser.copy(path, source, dest)
+
+class MarkdownParser(Parser):
+    extensions = [".md", ".markdown"]
+
+    def parse(self, path: Path, source: Path, dest: Path):
+        content = self.read(Content.load())
+        html = markdown(content.body)
+        self.write(html, path, dest)
+        sys.stdout.write("\x1b[1;32m{} converted to HTML. Metadata: {}\n".format(path.name, content))
+
+
+class ReStructuredTextParser(Parser):
+    extensions = [".rst"]
+
+    def parse(self, path: Path, source: Path, dest: Path):
+        content = self.read(Content.load())
+        html = publish_parts(content.body, writer_name="html5")
+        self.write(html["html"], path, dest)
+        sys.stdout.write("\x1b[1;32m{} converted to HTML. Metadata: {}\n".format(path.name, content))
