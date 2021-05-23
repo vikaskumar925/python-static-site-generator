@@ -11,5 +11,5 @@ def main(source="content",dest="dist"):
     Site(**config).build()
 
 
-main(typer.run())
+typer.run(main)
 
